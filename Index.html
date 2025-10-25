@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard RRHH Global (Gemini-Powered)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
+        /* Estilos para el Mapa de Calor (Heatmap) */
+        .heatmap-cell { transition: background-color 0.3s ease; }
+        /* Color gradiente para Scorecards: del rojo (0%) al verde (100%) */
+        .bg-score-0 { background-color: #fca5a5; } /* Rojo claro */
+        .bg-score-25 { background-color: #fcd34d; } /* Amarillo */
+        .bg-score-50 { background-color: #a7f3d0; } /* Verde claro */
+        .bg-score-75 { background-color: #34d399; } /* Verde medio */
+        .bg-score-100 { background-color: #059669; } /* Verde oscuro */
+    </style>
+</head>
+<body class="p-8">
+
+    <header class="mb-10">
+        <h1 class="text-4xl font-bold text-gray-800">Panel de Control de RRHH Global</h1>
+        <p class="text-gray-600 mt-2">Visión Estratégica impulsada por Gemini - Fases A (Compliance) y B (Cultura).</p>
+    </header>
+
+    <div id="loading" class="flex justify-center items-center h-48">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+        <p class="ml-4 text-indigo-600">Cargando métricas y ejecutando el análisis de IA...</p>
+    </div>
+
+    <main id="main-content" class="hidden">
+        
+        <section class="mb-10 bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">📢 Informe Estratégico Ejecutivo (Generado por IA)</h2>
+            <div id="ai-report" class="text-gray-700 leading-relaxed whitespace-pre-line">
+                </div>
+        </section>
+
+        <section class="mb-10 bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🌍 Mapa de Estado Global (Compliance vs. Cultura)</h2>
+            <div id="heatmap-container" class="grid grid-cols-6 gap-2 text-sm text-white font-semibold text-center">
+                <div class="col-span-2 text-left text-gray-500 font-normal">PAÍS</div>
+                <div class="col-span-2 py-2 bg-indigo-500 rounded-lg">SCORECARD COMPLIANCE (Fase A)</div>
+                <div class="col-span-2 py-2 bg-green-500 rounded-lg">ÍNDICE CULTURAL (Fase B)</div>
+                </div>
+        </section>
+
+        <section class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">✅ Matriz de Tareas Activas</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">País</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bloque</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción de Tarea</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsable</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-table-body" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    
+
+    <script>
+        // Función para asignar un color basado en el puntaje (0 a 100)
+        function getColorClass(score) {
+            if (score >= 90) return 'bg-score-100';
+            if (score >= 70) return 'bg-score-75';
+            if (score >= 40) return 'bg-score-50';
+            if (score >= 10) return 'bg-score-25';
+            return 'bg-score-0';
+        }
+
+        // Función principal para cargar todos los datos
+        async function loadDashboard() {
+            const aiReportElement = document.getElementById('ai-report');
+            const heatmapContainer = document.getElementById('heatmap-container');
+            const tasksTableBody = document.getElementById('tasks-table-body');
+            const loadingIndicator = document.getElementById('loading');
+            const mainContent = document.getElementById('main-content');
+
+            try {
+                // 1. Cargar el Informe Ejecutivo de la IA
+                const aiResponse = await fetch('/api/ia/informe');
+                const aiData = await aiResponse.json();
+                
+                // Mostrar el informe con saltos de línea
+                if (aiData.informe_ejecutivo) {
+                    aiReportElement.innerHTML = aiData.informe_ejecutivo.replace(/\n/g, '<br>');
+                } else {
+                    aiReportElement.textContent = 'Error al cargar el informe de la IA: ' + aiData.error;
+                    aiReportElement.classList.add('text-red-600');
+                }
+
+
+                // 2. Cargar las Métricas para el Mapa de Calor
+                const metricsResponse = await fetch('/api/metricas');
+                const metricsData = await metricsResponse.json();
+
+                // 3. Renderizar el Mapa de Calor
+                for (const pais in metricsData) {
+                    const data = metricsData[pais];
+                    const complianceColor = getColorClass(data.compliance);
+                    const culturaColor = getColorClass(data.cultura);
+
+                    const row = `
+                        <div class="col-span-2 py-2 text-gray-700 text-left font-bold">${pais}</div>
+                        <div class="col-span-2 py-2 rounded-lg ${complianceColor} heatmap-cell">${data.compliance}%</div>
+                        <div class="col-span-2 py-2 rounded-lg ${culturaColor} heatmap-cell">${data.cultura}%</div>
+                    `;
+                    heatmapContainer.insertAdjacentHTML('beforeend', row);
+                }
+
+                // 4. Cargar y Renderizar la Matriz de Tareas
+                const tasksResponse = await fetch('/api/tareas');
+                const tasksData = await tasksResponse.json();
+                
+                tasksData.forEach(task => {
+                    // Asigna colores a la columna de Estado
+                    let statusClass = 'text-gray-500 bg-gray-100';
+                    if (task.estado === 'Completado') {
+                        statusClass = 'text-green-800 bg-green-100';
+                    } else if (task.estado === 'En Curso') {
+                        statusClass = 'text-yellow-800 bg-yellow-100';
+                    }
+
+                    const row = `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${task.pais}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${task.bloque} (${task.fase})</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs overflow-hidden truncate">${task.descripcion}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${task.responsable}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                    ${task.estado}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                    tasksTableBody.insertAdjacentHTML('beforeend', row);
+                });
+
+            } catch (error) {
+                console.error("Error al cargar el Dashboard:", error);
+                loadingIndicator.innerHTML = '<p class="text-red-600">Error crítico al conectar con el servidor. Asegúrate de que `python app.py` sigue ejecutándose en la Terminal.</p>';
+                return;
+            }
+
+            // Ocultar el indicador de carga y mostrar el contenido
+            loadingIndicator.style.display = 'none';
+            mainContent.classList.remove('hidden');
+        }
+
+        // Ejecutar la carga del dashboard al iniciar
+        loadDashboard();
+
+    </script>
+
+</body>
+</html>
